@@ -1,3 +1,6 @@
+# This Dockerfile builds an Ubuntu MATE desktop environment with ROS2 Humble, Gazebo, Turtlebot3, VSCode, and MATLAB R2025b with ROS Toolbox.
+# It is based on the linuxserver.io baseimage-kasmvnc:ubuntujammy image.
+# The image also includes an OpenSSH server to allow SSH access to the 'me485' user with password authentication
 FROM ghcr.io/linuxserver/baseimage-kasmvnc:ubuntujammy
 
 # set version label
@@ -11,9 +14,6 @@ ENV TITLE="Ubuntu MATE"
 
 # prevent Ubuntu's firefox stub from being installed
 COPY /root/etc/apt/preferences.d/firefox-no-snap /etc/apt/preferences.d/firefox-no-snap
-
-
-COPY fastrtps_profile.xml /etc/fastrtps_profile.xml
 
 RUN \
   echo "**** add icon ****" && \
@@ -79,8 +79,8 @@ RUN sudo apt install gedit nano vim -y
 
 # Setup ROS2 terminal usage
 RUN echo 'export ROS_DOMAIN_ID=30 #TURTLEBOT3' >> /home/me485/.bashrc
-RUN echo 'export RMW_IMPLEMENTATION=rmw_fastrtps_cpp' >> /home/me485/.bashrc
-RUN echo 'export FASTRTPS_DEFAULT_PROFILES_FILE=/etc/fastrtps_profile.xml' >> /home/me485/.bashrc
+# RUN echo 'export RMW_IMPLEMENTATION=rmw_fastrtps_cpp' >> /home/me485/.bashrc
+# RUN echo 'export FASTRTPS_DEFAULT_PROFILES_FILE=/etc/fastrtps_profile.xml' >> /home/me485/.bashrc
 RUN echo 'source /usr/share/gazebo/setup.bash' >> /home/me485/.bashrc
 RUN echo 'source /opt/ros/humble/setup.bash' >> /home/me485/.bashrc
 RUN echo 'source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash' >> /home/me485/.bashrc

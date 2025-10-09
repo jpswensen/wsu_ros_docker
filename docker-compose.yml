@@ -13,10 +13,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
       - SUBFOLDER=/ #optional
-      - TITLE=Webtop #optional
-      - ROS_DOMAIN_ID=30
-      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      - FASTRTPS_DEFAULT_PROFILES_FILE=file:///etc/fastrtps_profile.xml
+      - TITLE=WSU_ROS_DOCKER #optional
     volumes:
       #- ./config:/config
       - ./shared:/home/me485/shared
@@ -32,18 +29,6 @@ services:
     restart: unless-stopped
     networks:
       - rosnet
-
-  # matlab:
-  #   image: mathworks/matlab:r2025b
-  #   command: -browser
-  #   ports:
-  #     - "8888:8888"
-  #   shm_size: "512m"
-  #   environment:
-  #     - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-  #     - ROS_DOMAIN_ID=30
-  #   networks:
-  #     - rosnet
 
 networks:
   rosnet:
