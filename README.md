@@ -25,6 +25,9 @@ Follow these steps to get the docker image created, the container created and ru
   6. Wait 20-ish minutes for the image to be created (future containers based on this image won't take this long)
   7. Access the novnc remote desktop via a web browser at http://localhost:3000
 
+After the initial creation of the image and container, you can either use the command line with the docker-compose command with the up or down subcommand in the wsu_ros_docker folder to bring the container up and down, or you can use the stop/play buttons in Docker Desktop.
+
+
 # Usage
 
 ## Test ROS and ROS+Gazebo with floating_camera package
