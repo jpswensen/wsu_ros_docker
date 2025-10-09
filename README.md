@@ -8,19 +8,20 @@ There is a folder called "shared" that allows easy transfer of files between the
 Follow these steps to get the docker image created, the container created and running, and 
 
   1. Clone the repository
-    ```
+  
+  ```
     git clone https://github.com/jpswensen/wsu_ros_docker.git
-    ```
+  ```
   2. Install Docker and/or Docker Desktop (https://www.docker.com/products/docker-desktop/)
   3. Open a terminal windows (Terminal.app on MacOS, Windows Terminal+PowerShell recommended for Windows, any terminal in Linux)
   4. Navigate to the location where you cloned the repository
-    ```
+  ```
     cd wsu_ros_docker
-    ```
+  ```
   5. Use docker-compose to create the docker image and a docker container based on the image
-    ```
+  ```
     docker-compose up
-    ```
+  ```
   6. Wait 20-ish minutes for the image to be created (future containers based on this image won't take this long)
   7. Access the novnc remote desktop via a web browser at http://localhost:3000
 
