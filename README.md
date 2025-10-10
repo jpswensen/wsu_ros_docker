@@ -1,11 +1,15 @@
 # wsu_ros_docker
-A docker image for wsu robotics classes that has ROS+Gazebo, Python, and Matlab pre-installed
+A Docker image for WSU robotics classes with ROS 2 + Gazebo, Python, and MATLAB pre-installed.
 
-There is a folder called "shared" that allows easy transfer of files between the host filesystem and the docker filesystem. In the docker container, this is located at /home/me485/shared. I recommend doing your schoolwork in this folder so that if something accidentally happens to the docker container, you don't lose your work.
+There is a folder called "shared" that allows easy transfer of files between the host filesystem and the Docker filesystem. In the Docker container, this is mounted at `/home/me485/shared`. Do your schoolwork in this folder so that if something happens to the container, you don't lose your work.
 
 # Installation
 
-Follow these steps to get the docker image created, the container created and running, and 
+Follow these steps to build the image, create the container, and access the desktop inside the container.
+
+Prereqs
+- Docker Desktop installed and running
+- ~4 CPU / 6–8 GB RAM recommended for Gazebo
 
   1. Clone the repository
   
@@ -13,19 +17,22 @@ Follow these steps to get the docker image created, the container created and ru
     git clone https://github.com/jpswensen/wsu_ros_docker.git
   ```
   2. Install Docker and/or Docker Desktop (https://www.docker.com/products/docker-desktop/)
-  3. Open a terminal windows (Terminal.app on MacOS, Windows Terminal+PowerShell recommended for Windows, any terminal in Linux)
+  3. Open a terminal window (Terminal.app on macOS, Windows Terminal+PowerShell on Windows, any terminal in Linux)
   4. Navigate to the location where you cloned the repository
   ```
     cd wsu_ros_docker
   ```
-  5. Use docker-compose to create the docker image and a docker container based on the image
+  5. Use docker-compose to build the image and create the container
   ```
     docker-compose up
   ```
-  6. Wait 20-ish minutes for the image to be created (future containers based on this image won't take this long)
-  7. Access the novnc remote desktop via a web browser at http://localhost:3000
+  6. Wait ~20 minutes for the first build (subsequent starts are faster)
+  7. Access the noVNC desktop in a web browser at http://localhost:3000
 
-After the initial creation of the image and container, you can either use the command line with the docker-compose command with the up or down subcommand in the wsu_ros_docker folder to bring the container up and down, or you can use the stop/play buttons in Docker Desktop.
+After the initial creation of the image and container, you can either use the command line in the `wsu_ros_docker` folder or the buttons in Docker Desktop to manage it:
+- Start (detached): `docker-compose up -d`
+- Stop and remove: `docker-compose down`
+- Tail logs: `docker-compose logs -f`
 
 
 # Usage
@@ -71,7 +78,61 @@ python3 custom_listener.py
 
 Observe that the custom listener is receiving messages on the /chatter topic and printing them out.
 
-## Test that Matlab ROS2 is communicating correctly with ROS2 and the floating_camera package
+## Test that the python wrapper for the Matlab ROS2 floating_camera package is working
+
+This repo includes a MATLAB wrapper that controls the ROS 2 floating camera by calling Python (`rclpy`) from MATLAB via `py.*`. Use this when you don’t have MATLAB’s ROS Toolbox.
+
+What you’ll do
+1) Launch the Gazebo world and floating camera
+2) Start MATLAB and point it at the ROS-enabled Python
+3) Use the `FloatingCamera` MATLAB class to view images and send commands
+
+Step-by-step
+1. In a terminal inside the container, build and launch the world (if not already running):
+  ```
+  cd ~/shared/ros2_camera_ws
+  colcon build
+  source install/setup.bash
+  ros2 launch floating_camera camera_world.launch.py
+  ```
+  You should see Gazebo with the floating camera and colored spheres.
+
+2. Start MATLAB from a terminal inside the container so it inherits the ROS environment. The first run will prompt for WSU SSO and license selection (see “Current known problems” below for first-run notes). Once MATLAB is open, in the Command Window:
+  ```matlab
+  % Make sure the MATLAB client is on the path
+  addpath('~/shared/MatlabRosClient');
+
+  % Point MATLAB at the system Python where rclpy is available
+  pyenv('Version','/usr/bin/python3');
+
+  % Create and start the camera client
+  cam = FloatingCamera();
+  cam.start();
+
+  % Fetch and display an image (returns [] until the first frame arrives)
+  img = cam.getImage();
+  cam.show(img);   % or simply: cam.show();
+
+  % Publish a gentle yaw command (Twist: vx,vy,vz, wx,wy,wz)
+  cam.publishTwist(0,0,0, 0,0,0.2);
+
+  % Stop when done
+  cam.stop();
+  ```
+
+3. Prefer an example? Run the provided script:
+  ```matlab
+  cd ~/shared/MatlabRosClient
+  open('FloatingCameraExample.m');
+  % Press Run
+  ```
+
+Troubleshooting
+- If MATLAB cannot import `rclpy`, verify in a terminal: `python3 -c "import rclpy"`. If that works, ensure `pyenv('Version','/usr/bin/python3')` in MATLAB and that MATLAB was launched from a terminal where ROS is sourced.
+- If no images appear, confirm the topic exists: `ros2 topic list` should include `/floating_camera/floating_camera/image_raw`.
+- Use `cam.isRunning()` to check the client is spinning; call `cam.stop()` before re-running scripts.
+
+## Test that native Matlab ROS2 is communicating correctly with ROS2 and the floating_camera package
 
 TODO: Not yet working well
 
@@ -118,3 +179,7 @@ TODO: Not yet working well
   ros2 topic list
   ```
   * Quickly observe the topics printout out correctly in Matlab before the crash occurs.
+
+Notes/workarounds
+- Launch MATLAB from a terminal after starting ROS nodes and avoid `clear all` while nodes are active; prefer calling object `stop()` methods first.
+- If you need to reset MATLAB’s Python state, try `clear classes; clear all; close all;` and re-run the `pyenv(...)` line.
