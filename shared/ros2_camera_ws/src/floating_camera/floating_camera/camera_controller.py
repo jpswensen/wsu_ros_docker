@@ -56,7 +56,7 @@ class CameraController:
 
     Contract:
             - Inputs:
-                - Pose set service: world-frame Pose (zeros velocity when set).
+                - Pose topic (/floating_camera/set_pose): geometry_msgs/Pose in world frame (zeros velocity when received).
                 - Velocity topic (/floating_camera/cmd_vel): body-fixed camera OPTICAL frame Twist
                     (Z forward along optical axis, X right, Y down; REP-103 optical frame).
         - Outputs:
@@ -86,11 +86,12 @@ class CameraController:
         while not self._set_cli.wait_for_service(timeout_sec=1.0):
             self._node.get_logger().info('Waiting for /gazebo/set_entity_state...')
 
-        # Pub/Sub and Service endpoints
+        # Pub/Sub endpoints
         self._vel_pub = self._node.create_publisher(Twist, '/floating_camera/velocity', 10)
         self._pose_pub = self._node.create_publisher(PoseStamped, '/floating_camera/pose', 10)
         self._vel_sub = self._node.create_subscription(Twist, '/floating_camera/cmd_vel', self._on_cmd_vel, 10)
-        self._set_pose_srv = self._node.create_service(SetEntityState, '/floating_camera/set_pose', self._on_set_pose)
+        # Accept external pose commands via topic (Pose in world frame)
+        self._set_pose_sub = self._node.create_subscription(Pose, '/floating_camera/set_pose', self._on_set_pose_topic, 10)
 
     # Public API
     def set_pose(self, position: Tuple[float, float, float], rpy: Tuple[float, float, float]):
@@ -127,14 +128,10 @@ class CameraController:
         w_w = self._matvec3(R_w_o, w_o)
         self.set_velocity(tuple(v_w), tuple(w_w))
 
-    def _on_set_pose(self, request: SetEntityState.Request, response: SetEntityState.Response):
-        # Extract pose from request and set; velocity is zeroed by set_pose()
-        pose = request.state.pose
+    def _on_set_pose_topic(self, pose: Pose):
+        # Extract pose from topic and set; velocity is zeroed by set_pose()
         r, p, y = quaternion_to_euler(pose.orientation)
         self.set_pose((pose.position.x, pose.position.y, pose.position.z), (r, p, y))
-        response.success = True
-        response.status_message = 'Pose set; velocity zeroed.'
-        return response
 
     def _on_timer(self):
         now = self._node.get_clock().now()
