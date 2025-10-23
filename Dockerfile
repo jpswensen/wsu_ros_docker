@@ -20,11 +20,19 @@ RUN \
   curl -o \
     /kclient/public/icon.png \
     https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/webtop-logo.png && \
-  echo "**** install packages ****" && \
-  add-apt-repository -y ppa:mozillateam/ppa && \
+  echo "**** base apt setup, repos, and installs ****" && \
   apt-get update && \
-  DEBIAN_FRONTEND=noninteractive \
-  apt-get install --no-install-recommends -y \
+  apt-get upgrade -y && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    software-properties-common curl wget ca-certificates gnupg && \
+  add-apt-repository -y universe && \
+  add-apt-repository -y ppa:mozillateam/ppa && \
+  curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+  sh -c 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" > /etc/apt/sources.list.d/ros2.list' && \
+  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft-archive-keyring.gpg && \
+  sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list' && \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ayatana-indicator-application \
     firefox \
     mate-applets \
@@ -34,26 +42,21 @@ RUN \
     ubuntu-mate-artwork \
     ubuntu-mate-default-settings \
     ubuntu-mate-desktop \
-    ubuntu-mate-icon-themes && \
+    ubuntu-mate-icon-themes \
+    ros-humble-desktop \
+    'ros-humble-turtlebot3*' \
+    'ros-humble-gazebo*' \
+    python3-colcon-common-extensions python3-argcomplete \
+    gedit nano vim \
+    code python3.10-venv \
+    openssh-server \
+    x11vnc && \
   echo "**** mate tweaks ****" && \
   rm -f \
     /etc/xdg/autostart/mate-power-manager.desktop \
-    /etc/xdg/autostart/mate-screensaver.desktop && \
-  echo "**** cleanup ****" && \
-  apt-get autoclean && \
-  rm -rf \
-    /config/.cache \
-    /config/.launchpadlib \
-    /var/lib/apt/lists/* \
-    /var/tmp/* \
-    /tmp/*
+    /etc/xdg/autostart/mate-screensaver.desktop
 
-RUN apt-get update && apt-get upgrade -y
-RUN sudo apt install software-properties-common -y
-RUN sudo add-apt-repository universe -y
-RUN sudo apt update && sudo apt install curl wget ca-certificates -y
-RUN sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+## consolidated above
 
 
 
@@ -106,6 +109,7 @@ RUN wget -q https://www.mathworks.com/mpm/glnxa64/mpm
 RUN chmod +x mpm
 RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="MATLAB"
 RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="ROS Toolbox"
+RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="Image Processing Toolbox"
 RUN sudo rm -rf mpm /tmp/mathworks_root.log
 RUN sudo ln -s /opt/matlab/R2025b/bin/matlab /usr/local/bin/matlab
 
