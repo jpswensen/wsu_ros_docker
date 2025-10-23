@@ -8,11 +8,19 @@ from __future__ import annotations
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, Pose
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
 
+def euler_to_quaternion(roll: float, pitch: float, yaw: float):
+    """Convert Euler angles to quaternion."""
+    qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+    qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+    qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    from geometry_msgs.msg import Quaternion
+    return Quaternion(x=qx, y=qy, z=qz, w=qw)
 
 class CameraDemo(Node):
     def __init__(self):
@@ -48,8 +56,38 @@ class CameraDemo(Node):
         )
         
         # Publisher for velocity commands
+        self.set_pose_pub = self.create_publisher(Pose, '/floating_camera/set_pose', 10)
         self.vel_pub = self.create_publisher(Twist, '/floating_camera/cmd_vel', 10)
         
+        # Give publishers time to connect
+        import time
+        time.sleep(0.5)
+        
+        # Zero the initial velocity
+        zero_twist = Twist()
+        self.vel_pub.publish(zero_twist)
+
+        time.sleep(0.1)
+        
+        # Set initial pose (use Pose, not PoseStamped)
+        # Specify in optical frame: Z forward, X right, Y down
+        zero_pose = Pose()
+        zero_pose.position.x = 0.0
+        zero_pose.position.y = 0.0
+        zero_pose.position.z = -7.0  # Fixed: was -7.0 (below ground)
+
+        # Yaw π/2 about optical Z axis (viewing direction)
+        # In optical frame: rotation about Z (forward) axis
+        rpy = (0.0, 0.0, np.pi/2.0)  # Roll, Pitch, Yaw in optical frame
+        zero_pose.orientation = euler_to_quaternion(*rpy)
+
+        self.set_pose_pub.publish(zero_pose)
+
+        time.sleep(0.1)
+        
+        self.get_logger().info('Published initial pose and velocity commands')
+        self.get_logger().info(f'  Initial yaw: {np.pi/2:.3f} rad (90 degrees) about optical Z axis')
+
         # Demo state
         self.start_time = self.get_clock().now()
         self.rotation_period = 2.0  # Swap direction every 2 seconds
@@ -60,7 +98,7 @@ class CameraDemo(Node):
         # Timer for image display (30 Hz)
         self.display_timer = self.create_timer(1.0/30.0, self.display_callback)
         
-        self.get_logger().info('  Subscribing to /floating_camera/floating_camera/image_raw')
+        self.get_logger().info('  Subscribing to /floating_camera/image_raw')
         self.get_logger().info('  Subscribing to /floating_camera/pose')
         self.get_logger().info('  Publishing to /floating_camera/cmd_vel')
         
@@ -78,8 +116,18 @@ class CameraDemo(Node):
     def pose_callback(self, msg: PoseStamped):
         """Receive camera pose."""
         self.current_pose = msg
+
+        # print(f'Pose received: {msg}')
     
     def velocity_callback(self):
+
+
+        cmd = Twist()
+        cmd.angular.y = 0.2
+        self.vel_pub.publish(cmd)
+
+        return
+
         """Publish velocity commands for the demo."""
         elapsed = (self.get_clock().now() - self.start_time).nanoseconds / 1e9
         

@@ -43,9 +43,10 @@ setup(
         ('share/ament_index/resource_index/packages',
          ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
-        (os.path.join('share', package_name, 'floating_camera'), glob('floating_camera/*.world')),
-        (os.path.join('share', package_name, 'config'), glob('floating_camera/config/*.yaml')),
+    (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+    (os.path.join('share', package_name, 'floating_camera'), glob('floating_camera/*.world')),
+    # Install config files from the correct path (this script runs in src/floating_camera)
+    (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -56,7 +57,9 @@ setup(
     entry_points={
         'console_scripts': [
             'spawn_camera.py = floating_camera.spawn_camera:main',
-            'camera_demo.py = floating_camera.camera_demo:main'
+            'camera_demo.py = floating_camera.camera_demo:main',
+            'set_gui_camera.py = floating_camera.set_gui_camera:main',
+            'gazebo_view_setter.py = floating_camera.gazebo_view_setter:main'
         ],
     },
 )

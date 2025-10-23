@@ -14,7 +14,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, Pose
 import numpy as np
 
 
@@ -46,10 +46,14 @@ class FloatingCameraNode(Node):
 
         # Publisher for velocity commands (external control)
         self.vel_pub = self.create_publisher(Twist, '/floating_camera/cmd_vel', 10)
+        
+        # Publisher for setting pose directly
+        self.set_pose_pub = self.create_publisher(Pose, '/floating_camera/set_pose', 10)
 
         self.get_logger().info('  Subscribing to /floating_camera/floating_camera/image_raw')
         self.get_logger().info('  Subscribing to /floating_camera/pose')
         self.get_logger().info('  Publishing to /floating_camera/cmd_vel')
+        self.get_logger().info('  Publishing to /floating_camera/set_pose')
 
     def image_callback(self, msg: Image):
         try:
@@ -173,6 +177,22 @@ class FloatingCameraWrapper:
         msg.linear.x = float(lx); msg.linear.y = float(ly); msg.linear.z = float(lz)
         msg.angular.x = float(ax); msg.angular.y = float(ay); msg.angular.z = float(az)
         self.node.vel_pub.publish(msg)
+
+    def set_pose(self, x=0.0, y=0.0, z=0.0, qx=0.0, qy=0.0, qz=0.0, qw=1.0):
+        """
+        Set the camera pose directly.
+        x, y, z: position
+        qx, qy, qz, qw: orientation quaternion
+        """
+        msg = Pose()
+        msg.position.x = float(x)
+        msg.position.y = float(y)
+        msg.position.z = float(z)
+        msg.orientation.x = float(qx)
+        msg.orientation.y = float(qy)
+        msg.orientation.z = float(qz)
+        msg.orientation.w = float(qw)
+        self.node.set_pose_pub.publish(msg)
 
     def get_current_image_rgb(self):
         """

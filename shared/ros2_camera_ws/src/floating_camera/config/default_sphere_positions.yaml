@@ -1,0 +1,20 @@
+# Default sphere positions extracted from the reference image
+# These represent the 12 corner points from 3 colored squares at different depths
+
+# Green square corners (z=10)
+- [-3.89273, 0.24558, 10]
+- [-2.74558, -1.39273, 10]
+- [-2.25442, 1.39273, 10]
+- [-1.10727, -0.24558, 10]
+
+# Red square corners (z=12)
+- [-1.28171, -0.59767, 12]
+- [0.59767, -1.28171, 12]
+- [1.28171, 0.59767, 12]
+- [-0.59767, 1.28171, 12]
+
+# Blue square corners (z=16)
+- [2.63398, 0.36603, 16]
+- [3.63397, -1.36603, 16]
+- [5.36602, -0.36603, 16]
+- [4.36603, 1.36603, 16]
