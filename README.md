@@ -132,6 +132,36 @@ Troubleshooting
 - If no images appear, confirm the topic exists: `ros2 topic list` should include `/floating_camera/floating_camera/image_raw`.
 - Use `cam.isRunning()` to check the client is spinning; call `cam.stop()` before re-running scripts.
 
+## Clipboard between host and guest (noVNC)
+
+Summary
+- Guest → Host works: copying in the guest appears in the noVNC Clipboard panel.
+- Host → Guest requires an explicit user action in the noVNC Clipboard panel due to browser security; keyboard paste (Ctrl+Shift+V) pastes the remote clipboard, not your host clipboard.
+
+Recommended workflows
+1) Quick paste from host to guest via the noVNC Clipboard panel:
+   - Open the noVNC toolbar (Ctrl+Alt+Shift) → Clipboard (📋).
+   - Click the "Paste from local"/down-arrow button, or click into the panel and press Cmd/Ctrl+V to import your host clipboard.
+   - Close the toolbar and press Ctrl+Shift+V in the guest terminal to paste (this pastes the now-updated remote clipboard).
+
+2) Right-click paste inside the guest terminal:
+   - Right-click → Paste often succeeds because the browser allows paste on that user gesture.
+   - Note: the noVNC Clipboard inspector won’t auto-update to show host clipboard contents unless you import/paste into it.
+
+Browser settings
+- Ensure your browser allows clipboard for http://localhost:3000.
+  - Chrome/Edge: Lock icon → Site settings → Clipboard → Allow. Reload the page.
+  - Firefox: accept the clipboard prompt when shown. If needed, set `dom.events.asyncClipboard` to `true` in `about:config`.
+
+Terminal tips inside the guest
+- Use a modern terminal (e.g., `xfce4-terminal`) for standard shortcuts Ctrl+Shift+C/V.
+- If selection/middle-click paste works but keyboard paste is inconsistent, start the X clipboard bridge:
+  ```
+  autocutsel -fork -selection PRIMARY
+  autocutsel -fork -selection CLIPBOARD
+  ```
+  This keeps PRIMARY and CLIPBOARD in sync inside the guest. It doesn’t replace the browser’s need for a user gesture to import host clipboard, but it improves consistency once the remote clipboard is set.
+
 ## Test that native Matlab ROS2 is communicating correctly with ROS2 and the floating_camera package
 
 TODO: Not yet working well
@@ -144,42 +174,6 @@ TODO: Not yet working well
 
 # Current known problems
 
-1. For some reason, there is a weird interaction between Matlab and ROS2. If I start the talker node in the terminal first, then the listener in Matlab can kill the nodes run from the terminal. 
-  * Open matlab from a terminal
-  * Launch the demo talker node
-    ```
-    ros2 run demo_nodes_cpp talker
-    ```
-  * Run the MatlabListener script from Matlab
-  * The output of the demo talker script looks like
-  ```
-  [INFO] [1760036296.573883920] [talker]: Publishing: 'Hello World: 1'
-  [INFO] [1760036297.573633443] [talker]: Publishing: 'Hello World: 2'
-  [INFO] [1760036298.573870925] [talker]: Publishing: 'Hello World: 3'
-  [INFO] [1760036299.573848074] [talker]: Publishing: 'Hello World: 4'
-  [INFO] [1760036300.573673975] [talker]: Publishing: 'Hello World: 5'
-  [INFO] [1760036301.573608513] [talker]: Publishing: 'Hello World: 6'
-  [INFO] [1760036302.573712534] [talker]: Publishing: 'Hello World: 7'
-  [INFO] [1760036303.573784313] [talker]: Publishing: 'Hello World: 8'
-  [INFO] [1760036304.573691314] [talker]: Publishing: 'Hello World: 9'
-  [ros2run]: Killed
-  ```
-  * There is arguably no possible way that the Matlab script could cause the other node to crash unless it was doing something with ROS2 running under the hood.
-2. If I run the MatlabListener script first, and then run the demo talker node, it seems to be working correctly at first glance. However, if I terminate the script in Matlab and then issue a "clear all" command, once again the demo talker node process running in the terminal is killed.    
-3. If I use the launch file floating_camera packages to launch Gazebo and the floating_camera node, then open Matlab and run 'ros2 topic list' from Matlab, it first prints out the list of topics, but then both Matlab and ROS2+Gazebo crashes in the terminal
-  * Open a terminal, cd to the floating_camera workspace, source it, and launch the camera and world in gazebo
-  ```
-  cd ~/shared/ros2_camera_ws
-  colcon build
-  source install/setup.bash
-  ros2 launch floating_camera camera_world.launch.py
-  ```
-  * Open Matlab and run the command
-  ```
-  ros2 topic list
-  ```
-  * Quickly observe the topics printout out correctly in Matlab before the crash occurs.
+None
 
-Notes/workarounds
-- Launch MATLAB from a terminal after starting ROS nodes and avoid `clear all` while nodes are active; prefer calling object `stop()` methods first.
-- If you need to reset MATLAB’s Python state, try `clear classes; clear all; close all;` and re-run the `pyenv(...)` line.
+

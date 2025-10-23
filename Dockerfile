@@ -121,6 +121,11 @@ RUN apt-get update && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN usermod --password $(openssl passwd -6 me485) me485
 
+# Install x11vnc to allow VNC access to the desktop
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends x11vnc && \
+  apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 # Create s6 service for sshd so s6-overlay will manage the sshd long-running process
 RUN mkdir -p /etc/s6-overlay/s6-rc.d/svc-sshd /etc/s6-overlay/s6-rc.d/user/contents.d && \
   echo 'longrun' > /etc/s6-overlay/s6-rc.d/svc-sshd/type && \

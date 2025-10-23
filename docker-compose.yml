@@ -23,6 +23,7 @@ services:
       - 3001:3001
       - 2222:22
       - "7400-7500:7400-7500/udp"  # DDS discovery and data
+      - 5901:5901              
     # devices:
     #   - /dev/dri:/dev/dri #optional
     shm_size: "1gb" #optional
