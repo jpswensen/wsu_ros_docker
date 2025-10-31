@@ -62,7 +62,7 @@ class CameraDemo(Node):
         # Set initial pose
         zero_pose = Pose()
         zero_pose.position.x = 0.0
-        zero_pose.position.y = 1.0
+        zero_pose.position.y = 3.0
         zero_pose.position.z = -7.0
 
         # create an orientation in rpy, then convert to quaternion
@@ -144,6 +144,7 @@ class CameraDemo(Node):
     def pose_callback(self, msg: PoseStamped):
         """Receive camera pose."""
         self.current_pose = msg
+        
     
     def find_points_centroid(self, img):
         h, w = img.shape[:2]

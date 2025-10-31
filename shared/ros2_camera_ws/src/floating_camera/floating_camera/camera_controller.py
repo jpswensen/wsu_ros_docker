@@ -127,7 +127,7 @@ class CameraController:
                     (Z forward along optical axis, X right, Y down; REP-103 optical frame).
         - Outputs:
             - Applies state using /gazebo/set_entity_state service at a fixed rate.
-            - Publishes current pose in world frame (/floating_camera/pose).
+            - Publishes current camera OPTICAL frame pose in world frame (/floating_camera/pose).
             - Publishes current velocity in body-fixed frame (/floating_camera/velocity).
     - If pose is set directly via set_pose(), linear and angular velocities are reset to zero.
     - Call start() to begin periodic updates, and stop() to cancel them.
@@ -147,6 +147,8 @@ class CameraController:
 
         self._timer = None
         self._last_time: Optional[Time] = None
+
+    # No constant quaternion stored; we'll compose using rotation matrices for clarity
 
         # Service client
         self._set_cli = self._node.create_client(SetEntityState, '/gazebo/set_entity_state')
@@ -340,7 +342,16 @@ class CameraController:
         pose_msg = PoseStamped()
         pose_msg.header.stamp = now.to_msg()
         pose_msg.header.frame_id = 'world'
-        pose_msg.pose = state.pose
+        # Publish pose in OPTICAL frame coordinates
+        # Build R_w_o = R_w_l * R_l_o
+        R_w_l = self._quat_to_rot(self._quat)
+        R_l_o = self._link_from_optical()
+        R_w_o = self._matmul33(R_w_l, R_l_o)
+        q_w_o = self._rot_to_quat(R_w_o)
+        pose_msg.pose = Pose(
+            position=Point(x=self._pos[0], y=self._pos[1], z=self._pos[2]),
+            orientation=Quaternion(x=q_w_o[0], y=q_w_o[1], z=q_w_o[2], w=q_w_o[3])
+        )
         self._pose_pub.publish(pose_msg)
 
     # Rotation utilities
@@ -352,6 +363,42 @@ class CameraController:
             [2*(qx*qy + qz*qw), 1 - 2*(qx*qx + qz*qz), 2*(qy*qz - qx*qw)],
             [2*(qx*qz - qy*qw), 2*(qy*qz + qx*qw), 1 - 2*(qx*qx + qy*qy)],
         ]
+
+    def _rot_to_quat(self, R):
+        """Convert 3x3 rotation matrix to quaternion [x, y, z, w]."""
+        m00, m01, m02 = R[0]
+        m10, m11, m12 = R[1]
+        m20, m21, m22 = R[2]
+        tr = m00 + m11 + m22
+        if tr > 0.0:
+            S = math.sqrt(tr + 1.0) * 2.0  # S = 4*w
+            w = 0.25 * S
+            x = (m21 - m12) / S
+            y = (m02 - m20) / S
+            z = (m10 - m01) / S
+        elif (m00 > m11) and (m00 > m22):
+            S = math.sqrt(1.0 + m00 - m11 - m22) * 2.0  # S = 4*x
+            w = (m21 - m12) / S
+            x = 0.25 * S
+            y = (m01 + m10) / S
+            z = (m02 + m20) / S
+        elif m11 > m22:
+            S = math.sqrt(1.0 + m11 - m00 - m22) * 2.0  # S = 4*y
+            w = (m02 - m20) / S
+            x = (m01 + m10) / S
+            y = 0.25 * S
+            z = (m12 + m21) / S
+        else:
+            S = math.sqrt(1.0 + m22 - m00 - m11) * 2.0  # S = 4*z
+            w = (m10 - m01) / S
+            x = (m02 + m20) / S
+            y = (m12 + m21) / S
+            z = 0.25 * S
+        # Normalize to guard numerical issues
+        norm = math.sqrt(x*x + y*y + z*z + w*w)
+        if norm > 1e-12:
+            x /= norm; y /= norm; z /= norm; w /= norm
+        return [x, y, z, w]
 
     def _transpose(self, R):
         """Transpose a 3x3 matrix."""
