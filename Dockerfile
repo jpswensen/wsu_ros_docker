@@ -91,11 +91,9 @@ RUN echo 'if [ -z "$GAZEBO_MODEL_PATH" ]; then         export GAZEBO_MODEL_PATH=
 RUN echo 'export TURTLEBOT3_MODEL=waffle' >> /home/me485/.bashrc
 
 # Install VSCode
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-RUN sudo install -o root -g root -m 644 microsoft.gpg /etc/apt/keyrings/microsoft-archive-keyring.gpg
-RUN sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
 RUN sudo apt update -y
-RUN sudo apt install code -y
+RUN curl -L -o "code.deb" "https://go.microsoft.com/fwlink/?LinkID=760868"
+RUN sudo apt install ./code.deb -y
 RUN sudo apt install python3.10-venv -y
 
 # Get the interface set up, with working shortcuts for terminal sizing
@@ -112,6 +110,9 @@ RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matl
 RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="Image Processing Toolbox"
 RUN sudo rm -rf mpm /tmp/mathworks_root.log
 RUN sudo ln -s /opt/matlab/R2025b/bin/matlab /usr/local/bin/matlab
+RUN sudo mkdir -p /opt/matlab/R2025b/licenses
+RUN sudo chmod 777 /opt/matlab/R2025b/licenses
+
 
 USER root
 
