@@ -62,7 +62,7 @@ class CameraDemo(Node):
         # Set initial pose
         zero_pose = Pose()
         zero_pose.position.x = 0.0
-        zero_pose.position.y = 3.0
+        zero_pose.position.y = 2.0
         zero_pose.position.z = -7.0
 
         # create an orientation in rpy, then convert to quaternion
@@ -232,7 +232,18 @@ class CameraDemo(Node):
             self.cmd_vel_pub.publish(cmd)
             return
         
-        
+        # Used for debugging the motion (commented out or now)
+        # cmd.linear.x = 0.0
+        # cmd.linear.y = 0.0
+        # cmd.linear.z = 0.0
+        # cmd.angular.x = 0.0  # pitch
+        # cmd.angular.y = 0.0  # yaw
+        # cmd.angular.z = 0.0  # roll 
+        # self.cmd_vel_pub.publish(cmd)
+
+        # return
+
+
         target_center_raw, cx0, cy0 = self.find_points_centroid(img)
         self._filt_center = target_center_raw
         self._last_target_center = self._filt_center

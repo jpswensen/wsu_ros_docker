@@ -73,6 +73,21 @@ def generate_launch_description():
             default_value='3.0',
             description='Delay in seconds before setting GUI camera view'
         ),
+        DeclareLaunchArgument(
+            'gui_camera_retries',
+            default_value='10',
+            description='Number of additional attempts to set GUI camera view'
+        ),
+        DeclareLaunchArgument(
+            'gui_camera_retry_period',
+            default_value='0.5',
+            description='Seconds between GUI camera attempts'
+        ),
+        DeclareLaunchArgument(
+            'gui_camera_publish_count',
+            default_value='5',
+            description='How many times to publish the pose per attempt'
+        ),
         
         # Launch Gazebo as a system with correct plugins
         ExecuteProcess(
@@ -117,6 +132,9 @@ def generate_launch_description():
                 'gui_camera_pitch': LaunchConfiguration('gui_camera_pitch'),
                 'gui_camera_yaw': LaunchConfiguration('gui_camera_yaw'),
                 'delay': LaunchConfiguration('gui_camera_delay'),
+                'retries': LaunchConfiguration('gui_camera_retries'),
+                'retry_period': LaunchConfiguration('gui_camera_retry_period'),
+                'publish_count': LaunchConfiguration('gui_camera_publish_count'),
             }]
         ),
     ])

@@ -2,6 +2,9 @@
 """
 Script to set the Gazebo GUI camera (viewport) position.
 Can be called as a standalone script or imported.
+
+It prefers Gazebo Classic's 'gz camera' CLI and falls back to publishing a Pose
+to common GUI camera topics using 'gz topic'.
 """
 import rclpy
 from rclpy.node import Node
@@ -28,8 +31,8 @@ def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
     return q
 
 
-def set_gui_camera(node: Node, x: float, y: float, z: float, 
-                   roll: float = 0.0, pitch: float = 0.0, yaw: float = 0.0):
+def set_gui_camera(node: Node, x: float, y: float, z: float,
+                   roll: float = 0.0, pitch: float = 0.0, yaw: float = 0.0) -> bool:
     """
     Set the Gazebo GUI camera position and orientation.
     
@@ -43,11 +46,26 @@ def set_gui_camera(node: Node, x: float, y: float, z: float,
     import subprocess
     import tempfile
     import os
-    
-    # Convert roll, pitch, yaw to quaternion
+
+    # First attempt: use 'gz camera' if available and gzclient camera exists
+    try:
+        list_result = subprocess.run(
+            ['gz', 'camera', '-l'], capture_output=True, text=True, timeout=1.5
+        )
+        if list_result.returncode == 0 and 'gzclient_camera' in list_result.stdout:
+            pose_arg = f"{x},{y},{z},{roll},{pitch},{yaw}"
+            result = subprocess.run(
+                ['gz', 'camera', '-c', 'gzclient_camera', '-f', pose_arg],
+                capture_output=True, text=True, timeout=2.0
+            )
+            if result.returncode == 0:
+                node.get_logger().info('GUI camera position set via "gz camera"')
+                return True
+    except Exception:
+        pass
+
+    # Fallback: publish Pose to likely topics
     q = euler_to_quaternion(roll, pitch, yaw)
-    
-    # Create a temporary file with the Gazebo Pose message
     msg_content = f"""position {{
   x: {x}
   y: {y}
@@ -60,37 +78,32 @@ orientation {{
   w: {q.w}
 }}
 """
-    
-    try:
-        # Write message to temporary file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write(msg_content)
-            temp_file = f.name
-        
-        # Publish to Gazebo's user_camera joy_pose topic using gz command
-        cmd = [
-            'gz', 'topic',
-            '-p', '/gazebo/default/user_camera/joy_pose',
-            '-f', temp_file
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=2.0)
-        
-        # Clean up temporary file
-        os.unlink(temp_file)
-        
-        if result.returncode == 0:
-            node.get_logger().info('GUI camera position set successfully')
-        else:
-            node.get_logger().warn(f'Failed to set GUI camera: {result.stderr}')
-    except subprocess.TimeoutExpired:
-        node.get_logger().warn('Timeout setting GUI camera')
-        if 'temp_file' in locals():
+    topics = [
+        '/gazebo/default/user_camera/pose',
+        '/gazebo/default/gui/camera/pose',
+        '/gazebo/default/user_camera/joy_pose',
+    ]
+    for t in topics:
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+                f.write(msg_content)
+                temp_file = f.name
+            result = subprocess.run(
+                ['gz', 'topic', '-p', t, '-f', temp_file],
+                capture_output=True, text=True, timeout=2.0
+            )
             os.unlink(temp_file)
-    except FileNotFoundError:
-        node.get_logger().error('gz command not found. Make sure Gazebo is installed.')
-        if 'temp_file' in locals():
-            os.unlink(temp_file)
+            if result.returncode == 0:
+                node.get_logger().info(f'GUI camera position set via topic: {t}')
+                return True
+        except Exception:
+            try:
+                if 'temp_file' in locals():
+                    os.unlink(temp_file)
+            except Exception:
+                pass
+    node.get_logger().warn('Failed to set GUI camera using available methods')
+    return False
 
 
 def main(args=None):
@@ -98,14 +111,14 @@ def main(args=None):
     rclpy.init(args=args)
     node = Node('set_gui_camera')
     
-    # Default: position camera behind floating camera looking forward
-    # Adjust these values as needed
-    x = 0.0  # Behind the scene
+    # Default view: behind the scene looking along +X (camera optical axis in world)
+    # Adjust as needed to match your world orientation
+    x = 0.0
     y = 0.0
-    z = -7.0   # Slightly elevated
+    z = -7.0
     roll = 0.0
-    pitch = -np.pi/2  # Could tilt down: -0.2
-    yaw = np.pi/2    # Look forward
+    pitch = -np.pi/2
+    yaw = np.pi/2
     
     # Parse command line arguments if provided
     if len(sys.argv) >= 4:
