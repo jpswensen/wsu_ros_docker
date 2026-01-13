@@ -13,7 +13,8 @@ LABEL maintainer="thelamer"
 ENV TITLE="Ubuntu MATE"
 
 # prevent Ubuntu's firefox stub from being installed
-COPY /root/etc/apt/preferences.d/firefox-no-snap /etc/apt/preferences.d/firefox-no-snap
+#COPY /root/etc/apt/preferences.d/firefox-no-snap /etc/apt/preferences.d/firefox-no-snap
+COPY root/etc/apt/preferences.d/firefox-no-snap /etc/apt/preferences.d/firefox-no-snap
 
 RUN \
   echo "**** add icon ****" && \
@@ -48,7 +49,7 @@ RUN \
     'ros-humble-gazebo*' \
     python3-colcon-common-extensions python3-argcomplete \
     gedit nano vim \
-    code python3.10-venv \
+    python3.10-venv \
     openssh-server \
     x11vnc && \
   echo "**** mate tweaks ****" && \
@@ -102,16 +103,23 @@ RUN gsettings set org.mate.terminal.keybindings zoom-in '<Primary>equal'
 RUN gsettings set org.mate.terminal.keybindings zoom-out '<Primary>minus'
 RUN gsettings set org.mate.terminal.keybindings zoom-normal '<Primary>0'
 
-# Install MATLAB R2025b and ROS Toolbox
-RUN wget -q https://www.mathworks.com/mpm/glnxa64/mpm
-RUN chmod +x mpm
-RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="MATLAB"
-RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="ROS Toolbox"
-RUN sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="Image Processing Toolbox"
-RUN sudo rm -rf mpm /tmp/mathworks_root.log
-RUN sudo ln -s /opt/matlab/R2025b/bin/matlab /usr/local/bin/matlab
-RUN sudo mkdir -p /opt/matlab/R2025b/licenses
-RUN sudo chmod 777 /opt/matlab/R2025b/licenses
+
+# --- MATLAB installation is now optional ---
+ARG INSTALL_MATLAB=false
+ENV INSTALL_MATLAB=${INSTALL_MATLAB}
+
+# Install MATLAB R2025b and ROS Toolbox if requested
+RUN if [ "$INSTALL_MATLAB" = "true" ]; then \
+  wget -q https://www.mathworks.com/mpm/glnxa64/mpm && \
+  chmod +x mpm && \
+  sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="MATLAB" && \
+  sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="ROS Toolbox" && \
+  sudo HOME=/home/me485 ./mpm install --release=R2025b --destination=/opt/matlab/R2025b --products="Image Processing Toolbox" && \
+  sudo rm -rf mpm /tmp/mathworks_root.log && \
+  sudo ln -s /opt/matlab/R2025b/bin/matlab /usr/local/bin/matlab && \
+  sudo mkdir -p /opt/matlab/R2025b/licenses && \
+  sudo chmod 777 /opt/matlab/R2025b/licenses; \
+fi
 
 
 USER root
@@ -140,10 +148,13 @@ RUN mkdir -p /etc/s6-overlay/s6-rc.d/svc-sshd /etc/s6-overlay/s6-rc.d/user/conte
 
 # link home to /config/home so user data is persistent
 RUN sed -i '/^HOME=/d' /etc/environment \
- && mkdir -p /home/me485 \
- && chown -R me485:me485 /home/me485 \
- && ln -s /config /home/me485/config
+  && mkdir -p /home/me485 \
+  && chown -R me485:me485 /home/me485 \
+  && ln -s /config /home/me485/config
 
+RUN mkdir -p /tmp/.X11-unix \
+  && chown root:root /tmp/.X11-unix \
+  && chmod 1777 /tmp/.X11-unix
 
 # add local files
 COPY /root /
